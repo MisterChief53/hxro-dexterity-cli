@@ -1,60 +1,101 @@
-import * as web3 from '@solana/web3.js'
-import dexterityTs from '@hxronetwork/dexterity-ts'
-import * as bs58 from 'bs58'
-import {Wallet} from '@project-serum/anchor'
-const dexterity = dexterityTs
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Wallet } from '@project-serum/anchor';
+import dexterityTs from '@hxronetwork/dexterity-ts';
+import { promisify } from 'util';
+import fs from 'fs';
 
-const rpc = 'https://rpc-devnet.helius.xyz/?api-key=4ba0f9cc-c6e3-4401-84c0-f2c8a822a278'
-const connection = new web3.Connection(rpc, 'confirmed')
+const dexterity = dexterityTs;
+const filePath = 'config.json';
+const readFileAsync = promisify(fs.readFile);
 
-const keypair = web3.Keypair.fromSecretKey(new Uint8Array([60,189,27,225,160,219,124,225,84,6,170,60,80,77,82,30,8,195,124,209,201,106,160,75,241,24,65,31,188,163,176,96,74,235,111,27,66,117,17,54,239,0,50,35,159,151,20,29,74,31,157,136,139,13,22,202,111,198,78,41,53,52,145,167]))
+const readPrivateKey = async () => {
+  try {
+    const data = await readFileAsync(filePath, 'utf-8');
+    const jsonData = JSON.parse(data);
+    const privateKey = jsonData.privateKey.map((num: any) => parseInt(num));
+    return privateKey;
+  } catch (err) {
+    console.log('Error reading config file.', err);
+    throw err;
+  }
+};
 
-const wallet = new Wallet(keypair)
-const pubkey =  "63TPYUQPs3GfftYvG2iZjo42zk3uBArjGv2GEG8ao5dG"
-const MPG = "HyWxreWnng9ZBDPYpuYugAfpCMkRkJ1oz93oyoybDFLB"
-//const MPG = "HYuv5qxNmUpAVcm8u2rPCjjL2Sz5KHnVWsm56vYzZtjh"
-const mpgPubkey = new web3.PublicKey(MPG)
-const TRG = new web3.PublicKey("3tK2C4pmja6mR5SRaWgtRkL1HraeEDt2eV7VrNrBED6V")
+const rpc = 'https://rpc-devnet.helius.xyz/?api-key=4ba0f9cc-c6e3-4401-84c0-f2c8a822a278';
+const connection = new Connection(rpc, 'confirmed');
+
+let wallet: Wallet | null = null; // Hold the wallet instance
+
+const createTrader = async () => {
+  if (!wallet) {
+    const privateKey = await readPrivateKey();
+    const keypair = Keypair.fromSecretKey(new Uint8Array(privateKey));
+    wallet = new Wallet(keypair);
+  }
+
+  const trader = new dexterity.Trader(await dexterity.getManifest(rpc, true, wallet), TRG);
+  return trader;
+};
+
+const pubkey = new PublicKey('63TPYUQPs3GfftYvG2iZjo42zk3uBArjGv2GEG8ao5dG');
+const MPG = new PublicKey('HyWxreWnng9ZBDPYpuYugAfpCMkRkJ1oz93oyoybDFLB');
+const mpgPubkey = new PublicKey(MPG);
+const TRG = new PublicKey('3tK2C4pmja6mR5SRaWgtRkL1HraeEDt2eV7VrNrBED6V');
 const PRODUCT_NAME = 'BTCUSD-PERP';
 
-const account = async () => {
-    const manifest = await dexterity.getManifest(rpc, true, wallet)
-    const trader = new dexterity.Trader(manifest, TRG)
+export const account = async () => {
+  const trader = await createTrader();
 
-    await trader.connect(NaN, async() => {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `)
-    })
-}
+  await trader.connect(NaN, async () => {
+    console.log(
+      `BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${
+        (await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length
+      } | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()}`
+    );
+  });
+};
 
-const deposit = async(amount: number) => {
-    const manifest = await dexterity.getManifest(rpc, true, wallet)
-    const trader = new dexterity.Trader(manifest, TRG)
-    {/* DEPOSIT */}
+export const balance = async () => {
+  const trader = await createTrader();
+
+  await trader.connect(NaN, async () => {
+    console.log(`BALANCE: ${trader.getCashBalance()}`);
+  });
+};
+
+export const deposit = async (amount: number) => {
+  const trader = await createTrader();
+
+  const n = dexterity.Fractional.New(amount, 0);
+  await trader.connect(NaN, async () => {
+    console.log(
+      `BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${
+        (await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length
+      } | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()}`
+    );
+  });
+  await trader.deposit(n)
+  await trader.update()
+  await trader.connect(NaN, async () => {
+    console.log(
+      `BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${
+        (await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length
+      } | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()}`
+    );
+  });
+};
+
+export const withdraw = async (amount: number) => {
+    const trader = await createTrader();
+
     const n = dexterity.Fractional.New(amount, 0)
-    await trader.connect(NaN, async() => {
+
+    await trader.connect(NaN, async () => {
         console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `)
     })
-    await trader.deposit(n)
-    await trader.connect(NaN, async() => {
+
+    await trader.withdraw(n)
+    await trader.update()
+    await trader.connect(NaN, async () => {
         console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `)
     })
 }
-
-const createTrg = async() => {
-    const manifest = await dexterity.getManifest(rpc, true, wallet)
-    const trg = await manifest.createTrg(mpgPubkey)
-    console.log(trg.toBase58())
-}
-
-const getTrgs = async() => {
-    const manifest = await dexterity.getManifest(rpc, true, wallet)
-    let TRGs: any = [];
-    const trgArr = await manifest.getTRGsOfWallet(new web3.PublicKey(MPG))
-    trgArr.forEach((trg: any) => {TRGs.push(trg.pubkey)})
-    console.log(`\n\n\nTRGS:\n` + TRGs)
-}
-
-//createTrg()
-//getTrgs()
-account()
-//deposit(500)
