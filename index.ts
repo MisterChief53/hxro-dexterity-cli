@@ -31,10 +31,9 @@ const runCLI = async () => {
   }
   //account y balance (con verbose) no recibe nada, 
   
-  const newDeposit = (symbols: string[]) => {
+  const newDeposit = async (symbols: string[]) => {
     if(symbols.length == 1){
-      cli.deposit(parseInt(symbols[0],10));
-      console.log("Deposit succesful");
+      await cli.deposit(parseInt(symbols[0],10));
     }else if(symbols.length == 0){
       console.log("Not enough arguments");
     }else{
@@ -42,10 +41,9 @@ const runCLI = async () => {
     }
   }
   
-  const newWithdrawal = (symbols: string[]) => {
+  const newWithdrawal = async (symbols: string[]) => {
     if(symbols.length == 1){
-      cli.withdraw(parseInt(symbols[0],10));
-      console.log("Withdrawal succesful");
+      await cli.withdraw(parseInt(symbols[0],10));
     }else if(symbols.length == 0){
       console.log("Not enough arguments");
     }else{
@@ -53,6 +51,15 @@ const runCLI = async () => {
     }
   }
   
+  const newOrder = async (symbols: string[]) => { // 1 4 4
+    if(symbols.length == 3){
+      await cli.placeOrder(parseInt(symbols[0],10), parseInt(symbols[1],10), parseInt(symbols[0],10)?true:false);
+    }else if(symbols.length == 0){
+      console.log("Not enough arguments");
+    }else{
+      console.log("Too many arguments");
+    }
+  } 
   
   const createPoem = (symbols: string[]) => {
     var subject = 'john';
@@ -86,38 +93,10 @@ const runCLI = async () => {
   
     console.log(poem);
   }
-  
-  
-  const printKeys = () => {
-    const filePath = 'config.json';
-  
-    fs.readFile(filePath, 'utf-8', (err,data) => {
-      if(err){
-        console.error('Error reading config file:', err);
-        return;
-      }
-  
-      const jsonData = JSON.parse(data);
-      
-      jsonData.field1 = 'Updated Value 1' + 'concat';
-      jsonData.field2 += 100;
-  
-      const updatedJsonString = JSON.stringify(jsonData, null, 2);
-  
-      fs.writeFile(filePath, updatedJsonString, 'utf-8', (err) =>{
-        if(err){
-          console.error('Error writing file:', err);
-          return;
-        }
-  
-        console.log('JSON data has been written to the file')
-      })
-    })
-  }
+
 
   if(symbols.length === 0){
-    //printCommandHelp();
-    await cli.account()
+    printCommandHelp();
     process.exit(0);
   }
 
@@ -128,20 +107,26 @@ const runCLI = async () => {
     case 'createPoem':
       createPoem(symbols.slice(1));
       break;
-    case 'printKeys':
-      printKeys();
-      break;
-    case 'balance':
+    case 'balance' || 'b':
       await cli.balance();
       break;
-    case 'account':
+    case 'account' || 'a':
       await cli.account();
       break;
-    case 'deposit':
+    case 'deposit' || '-D':
       await newDeposit(symbols.slice(1));
       break;
-    case 'withdraw':
+    case 'withdraw' || '-W':
       await newWithdrawal(symbols.slice(1));
+      break;
+    case 'order' || 'o':
+      await newOrder(symbols.slice(1))
+      break;
+    case 'showMpg':
+      await cli.getMpgs()
+      break;
+    case 'cancelOrder':
+      //await cancelOrder()
       break;
     default:
       console.log("Unknown argument");

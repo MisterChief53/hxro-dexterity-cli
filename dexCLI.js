@@ -43,7 +43,7 @@ const classInitializer = () => __awaiter(void 0, void 0, void 0, function* () {
     // Validate TRG
     const trg = Array.from(yield manifest.getTRGsOfWallet(MPG));
     if (trg.length > 0) {
-        const trader = new dexterity.Trader(manifest, trg[0]);
+        const trader = new dexterity.Trader(manifest, new web3_js_1.PublicKey(trg[0].pubkey));
         return { manifest, trader };
     }
     else {
@@ -63,12 +63,12 @@ class dexCLI {
         return __awaiter(this, void 0, void 0, function* () {
             const n = dexterity.Fractional.New(amount, 0);
             yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+                console.log(`Depositing ${amount}...`);
             }));
             yield this.trader.deposit(n);
             yield this.trader.update();
             yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+                console.log(`\n---------------\nDeposit Succesful!\nNew Balance: ${this.trader.getCashBalance()}\n---------------\n`);
             }));
         });
     }
@@ -77,12 +77,12 @@ class dexCLI {
         return __awaiter(this, void 0, void 0, function* () {
             const n = dexterity.Fractional.New(amount, 0);
             yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+                console.log(`Withdrawing ${amount}...`);
             }));
             yield this.trader.withdraw(n);
             yield this.trader.update();
             yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+                console.log(`\n---------------\nWithdrawal Succesful!\nNew Balance: ${this.trader.getCashBalance()}\n---------------\n`);
             }));
         });
     }
@@ -97,13 +97,13 @@ class dexCLI {
                 const pnl = this.trader.getPnL();
                 const active = (yield Promise.all(this.trader.getPositions())).length;
                 const openOrders = (yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length;
-                console.log('\nBALANCE: ' + balance +
+                console.log('---------------\nAccount Info:\nBALANCE: ' + balance +
                     '\nEXCESS MARGIN: ' + excess +
                     '\nPORTFOLIO VALUE: ' + totalPortfolio +
                     '\nACTIVE POSITION VALUE: ' + positionValue +
                     '\nACTIVE: ' + active +
                     '\nOPEN ORDERS: ' + openOrders +
-                    '\nPNL: ' + pnl);
+                    '\nPNL: ' + pnl + '\n---------------\n');
             }));
         });
     }
@@ -111,7 +111,7 @@ class dexCLI {
     balance() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()}`);
+                console.log(`\n---------------\nCurrent Balance: ${this.trader.getCashBalance()}\n---------------\n`);
             }));
         });
     }
@@ -119,7 +119,7 @@ class dexCLI {
     placeOrder(size, price, isBid) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()} `);
+                console.log('Placing ' + price * size + ' limit in [' + this.PRODUCT_NAME + '] -> ' + (isBid ? "Buy" : "Sell"));
             }));
             let ProductIndex;
             for (const [name, { index, product }] of this.trader.getProducts()) {
@@ -130,11 +130,11 @@ class dexCLI {
             }
             const QUOTE_SIZE = dexterity.Fractional.New(size, 0);
             const limitPrice = dexterity.Fractional.New(price, 0);
-            yield this.trader.newOrder(ProductIndex, isBid, limitPrice, QUOTE_SIZE);
-            yield this.trader.update();
-            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
-                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()} `);
+            this.trader.newOrder(ProductIndex, isBid, limitPrice, QUOTE_SIZE).then(() => __awaiter(this, void 0, void 0, function* () {
+                console.log(`Placed ${(isBid ? "Buy" : "Sell")} Limit Order at $${limitPrice}`);
             }));
+            yield this.trader.update();
+            yield this.account();
         });
     }
     getMpgs() {
@@ -151,11 +151,27 @@ class dexCLI {
         });
     }
     ;
+    cancelOrder() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const orders = yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME));
+            if (orders.length === 0) {
+                console.log('CancelAllOrders Failed: Sorry there are no open orders on this account');
+                return;
+            }
+            this.trader.cancelAllOrders(this.PRODUCT_NAME, true);
+            console.log(`Canceled all orders`);
+        });
+    }
+    ;
 }
 exports.dexCLI = dexCLI;
 const start = () => __awaiter(void 0, void 0, void 0, function* () {
     const { manifest, trader } = yield (0, exports.classInitializer)();
     const cli = new dexCLI(manifest, trader);
-    cli.account();
+    //await cli.account()
+    //await cli.deposit(1000)
+    //await cli.withdraw(100)
+    //await cli.placeOrder(1, 1_000, true)
+    yield cli.cancelOrder();
 });
 start();

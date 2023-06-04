@@ -8,11 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = __importDefault(require("fs"));
 const dexCLI_1 = require("./dexCLI");
 const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
     const { manifest, trader } = yield (0, dexCLI_1.classInitializer)();
@@ -40,10 +36,9 @@ const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
         console.log(help);
     };
     //account y balance (con verbose) no recibe nada, 
-    const newDeposit = (symbols) => {
+    const newDeposit = (symbols) => __awaiter(void 0, void 0, void 0, function* () {
         if (symbols.length == 1) {
-            cli.deposit(parseInt(symbols[0], 10));
-            console.log("Deposit succesful");
+            yield cli.deposit(parseInt(symbols[0], 10));
         }
         else if (symbols.length == 0) {
             console.log("Not enough arguments");
@@ -51,11 +46,10 @@ const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
         else {
             console.log("Too many arguments");
         }
-    };
-    const newWithdrawal = (symbols) => {
+    });
+    const newWithdrawal = (symbols) => __awaiter(void 0, void 0, void 0, function* () {
         if (symbols.length == 1) {
-            cli.withdraw(parseInt(symbols[0], 10));
-            console.log("Withdrawal succesful");
+            yield cli.withdraw(parseInt(symbols[0], 10));
         }
         else if (symbols.length == 0) {
             console.log("Not enough arguments");
@@ -63,7 +57,18 @@ const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
         else {
             console.log("Too many arguments");
         }
-    };
+    });
+    const newOrder = (symbols) => __awaiter(void 0, void 0, void 0, function* () {
+        if (symbols.length == 3) {
+            yield cli.placeOrder(parseInt(symbols[0], 10), parseInt(symbols[1], 10), parseInt(symbols[0], 10) ? true : false);
+        }
+        else if (symbols.length == 0) {
+            console.log("Not enough arguments");
+        }
+        else {
+            console.log("Too many arguments");
+        }
+    });
     const createPoem = (symbols) => {
         var subject = 'john';
         var villain = 'johnny';
@@ -97,29 +102,8 @@ const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
     `;
         console.log(poem);
     };
-    const printKeys = () => {
-        const filePath = 'config.json';
-        fs_1.default.readFile(filePath, 'utf-8', (err, data) => {
-            if (err) {
-                console.error('Error reading config file:', err);
-                return;
-            }
-            const jsonData = JSON.parse(data);
-            jsonData.field1 = 'Updated Value 1' + 'concat';
-            jsonData.field2 += 100;
-            const updatedJsonString = JSON.stringify(jsonData, null, 2);
-            fs_1.default.writeFile(filePath, updatedJsonString, 'utf-8', (err) => {
-                if (err) {
-                    console.error('Error writing file:', err);
-                    return;
-                }
-                console.log('JSON data has been written to the file');
-            });
-        });
-    };
     if (symbols.length === 0) {
-        //printCommandHelp();
-        yield cli.account();
+        printCommandHelp();
         process.exit(0);
     }
     switch (symbols[0]) {
@@ -129,20 +113,26 @@ const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
         case 'createPoem':
             createPoem(symbols.slice(1));
             break;
-        case 'printKeys':
-            printKeys();
-            break;
-        case 'balance':
+        case 'balance' || 'b':
             yield cli.balance();
             break;
-        case 'account':
+        case 'account' || 'a':
             yield cli.account();
             break;
-        case 'deposit':
+        case 'deposit' || '-D':
             yield newDeposit(symbols.slice(1));
             break;
-        case 'withdraw':
+        case 'withdraw' || '-W':
             yield newWithdrawal(symbols.slice(1));
+            break;
+        case 'order' || 'o':
+            yield newOrder(symbols.slice(1));
+            break;
+        case 'showMpg':
+            yield cli.getMpgs();
+            break;
+        case 'cancelOrder':
+            //await cancelOrder()
             break;
         default:
             console.log("Unknown argument");

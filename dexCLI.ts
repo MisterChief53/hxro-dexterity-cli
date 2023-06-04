@@ -34,7 +34,7 @@ export const classInitializer = async () => {
   // Validate TRG
   const trg = Array.from(await manifest.getTRGsOfWallet(MPG))
   if (trg.length > 0) {
-    const trader = new dexterity.Trader(manifest, trg[0])
+    const trader = new dexterity.Trader(manifest, new PublicKey(trg[0].pubkey))
     return {manifest, trader}
   } else {
     const TRG = await manifest.createTrg(MPG)
@@ -56,41 +56,29 @@ export class dexCLI {
 
   async deposit (amount: number) {
     const n = dexterity.Fractional.New(amount, 0);
+
     await this.trader.connect(NaN, async () => {
-      console.log(
-        `BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${
-          (await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length
-        } | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`
-      );
+      console.log(`Depositing ${amount}...`)
     });
+
     await this.trader.deposit(n)
     await this.trader.update()
     await this.trader.connect(NaN, async () => {
-      console.log(
-        `BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${
-          (await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length
-        } | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`
-      );
+      console.log(`\n---------------\nDeposit Succesful!\nNew Balance: ${this.trader.getCashBalance()}\n---------------\n`);
     });
   };
 
   async withdraw (amount: number) {
     const n = dexterity.Fractional.New(amount, 0);
+
     await this.trader.connect(NaN, async () => {
-      console.log(
-        `BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${
-          (await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length
-        } | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`
-      );
+      console.log(`Withdrawing ${amount}...`)
     });
+
     await this.trader.withdraw(n)
     await this.trader.update()
     await this.trader.connect(NaN, async () => {
-      console.log(
-        `BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${
-          (await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length
-        } | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`
-      );
+      console.log(`\n---------------\nWithdrawal Succesful!\nNew Balance: ${this.trader.getCashBalance()}\n---------------\n`);
     });
   };
 
@@ -103,26 +91,25 @@ export class dexCLI {
       const pnl = this.trader.getPnL()
       const active = (await Promise.all(this.trader.getPositions())).length
       const openOrders = (await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length
-      console.log('\nBALANCE: ' + balance + 
+      console.log('---------------\nAccount Info:\nBALANCE: ' + balance + 
                   '\nEXCESS MARGIN: ' + excess + 
                   '\nPORTFOLIO VALUE: ' + totalPortfolio + 
                   '\nACTIVE POSITION VALUE: ' + positionValue + 
                   '\nACTIVE: ' + active + 
                   '\nOPEN ORDERS: ' + openOrders + 
-                  '\nPNL: ' + pnl)
+                  '\nPNL: ' + pnl + '\n---------------\n')
     })
   };
 
   async balance () {
     await this.trader.connect(NaN, async () => {
-      console.log(`BALANCE: ${this.trader.getCashBalance()}`);
+      console.log(`\n---------------\nCurrent Balance: ${this.trader.getCashBalance()}\n---------------\n`);
     });
   };
 
   async placeOrder (size: number, price: number, isBid: boolean) {
-  
     await this.trader.connect(NaN, async () => {
-        console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()} `)
+        console.log('Placing ' + price*size + ' limit in [' + this.PRODUCT_NAME + '] -> ' + (isBid ? "Buy" : "Sell"))
     })
   
     let ProductIndex: any
@@ -137,12 +124,12 @@ export class dexCLI {
   
     const limitPrice = dexterity.Fractional.New(price, 0)
   
-    await this.trader.newOrder(ProductIndex, isBid, limitPrice, QUOTE_SIZE)
+    this.trader.newOrder(ProductIndex, isBid, limitPrice, QUOTE_SIZE).then(async () => {
+      console.log(`Placed ${(isBid?"Buy":"Sell")} Limit Order at $${limitPrice}`);
+    })
   
     await this.trader.update()
-    await this.trader.connect(NaN, async () => {
-        console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()} `)
-    })
+    await this.account()
   }
 
   async getMpgs () {
@@ -157,6 +144,20 @@ export class dexCLI {
       }
     }
   };
+
+  async cancelOrder () {
+
+    const orders = await Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME));
+
+    if (orders.length === 0) {
+        console.log('CancelAllOrders Failed: Sorry there are no open orders on this account')
+        return
+    }
+
+    this.trader.cancelAllOrders(this.PRODUCT_NAME, true);
+
+    console.log(`Canceled all orders`);
+  };
 }
 
 const start = async() => {
@@ -164,7 +165,11 @@ const start = async() => {
   const {manifest, trader} = await classInitializer()
   const cli = new dexCLI(manifest, trader)
 
-  cli.account()
+  //await cli.account()
+  //await cli.deposit(1000)
+  //await cli.withdraw(100)
+  //await cli.placeOrder(1, 1_000, true)
+  await cli.cancelOrder()
 }
 
 start()
