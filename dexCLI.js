@@ -12,44 +12,73 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMpgs = exports.placeOrder = exports.withdraw = exports.deposit = exports.balance = exports.account = void 0;
+exports.getMpgs = exports.placeOrder = exports.withdraw = exports.deposit = exports.balance = exports.account = exports.readPrivateKey = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const anchor_1 = require("@project-serum/anchor");
 const dexterity_ts_1 = __importDefault(require("@hxronetwork/dexterity-ts"));
-const util_1 = require("util");
 const fs_1 = __importDefault(require("fs"));
 const dexterity = dexterity_ts_1.default;
 const filePath = 'config.json';
-const readFileAsync = (0, util_1.promisify)(fs_1.default.readFile);
-const readPrivateKey = () => __awaiter(void 0, void 0, void 0, function* () {
+const rpc = 'https://rpc-devnet.helius.xyz/?api-key=4ba0f9cc-c6e3-4401-84c0-f2c8a822a278';
+const connection = new web3_js_1.Connection(rpc, 'confirmed');
+const readPrivateKey = () => {
     try {
-        const data = yield readFileAsync(filePath, 'utf-8');
+        const data = fs_1.default.readFileSync(filePath, 'utf-8');
         const jsonData = JSON.parse(data);
-        const privateKey = jsonData.privateKey.map((num) => parseInt(num));
-        return privateKey;
+        return jsonData.privateKey.map((num) => parseInt(num));
+    }
+    catch (err) {
+        console.log('Error reading config file.', err);
+        throw err;
+    }
+};
+exports.readPrivateKey = readPrivateKey;
+const getTrg = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = fs_1.default.readFileSync(filePath, 'utf-8');
+        const jsonData = JSON.parse(data);
+        if (!jsonData.Trg) {
+            const newData = fs_1.default.readFileSync(filePath, 'utf-8');
+            jsonData.Trg = JSON.parse(newData).Trg;
+        }
+        return jsonData.Trg;
     }
     catch (err) {
         console.log('Error reading config file.', err);
         throw err;
     }
 });
-const rpc = 'https://rpc-devnet.helius.xyz/?api-key=4ba0f9cc-c6e3-4401-84c0-f2c8a822a278';
-const connection = new web3_js_1.Connection(rpc, 'confirmed');
-let wallet = null; // Hold the wallet instance
-const createTrader = () => __awaiter(void 0, void 0, void 0, function* () {
-    if (!wallet) {
-        const privateKey = yield readPrivateKey();
-        const keypair = web3_js_1.Keypair.fromSecretKey(new Uint8Array(privateKey));
-        wallet = new anchor_1.Wallet(keypair);
+const getMpg = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = fs_1.default.readFileSync(filePath, 'utf-8');
+        const jsonData = JSON.parse(data);
+        if (!jsonData.Mpg) {
+            const newData = fs_1.default.readFileSync(filePath, 'utf-8');
+            jsonData.Mpg = JSON.parse(newData).Mpg;
+        }
+        return jsonData.Mpg;
     }
+    catch (err) {
+        console.log('Error reading config file.', err);
+        throw err;
+    }
+});
+const createTrg = () => __awaiter(void 0, void 0, void 0, function* () {
+    const manifest = yield dexterity.getManifest(rpc, true, wallet);
+    const trg = yield manifest.createTrg(new web3_js_1.PublicKey(MPG));
+    console.log(trg.toBase58());
+});
+const privateKey = (0, exports.readPrivateKey)();
+const keypair = web3_js_1.Keypair.fromSecretKey(new Uint8Array(privateKey));
+const wallet = new anchor_1.Wallet(keypair);
+const MPG = getMpg();
+const TRG = getTrg();
+const mpgPubkey = new web3_js_1.PublicKey(MPG);
+const PRODUCT_NAME = 'BTCUSD-PERP';
+const createTrader = () => __awaiter(void 0, void 0, void 0, function* () {
     const trader = new dexterity.Trader(yield dexterity.getManifest(rpc, true, wallet), TRG);
     return trader;
 });
-const pubkey = new web3_js_1.PublicKey('63TPYUQPs3GfftYvG2iZjo42zk3uBArjGv2GEG8ao5dG');
-const MPG = new web3_js_1.PublicKey('HyWxreWnng9ZBDPYpuYugAfpCMkRkJ1oz93oyoybDFLB');
-const mpgPubkey = new web3_js_1.PublicKey(MPG);
-const TRG = new web3_js_1.PublicKey('3tK2C4pmja6mR5SRaWgtRkL1HraeEDt2eV7VrNrBED6V');
-const PRODUCT_NAME = 'BTCUSD-PERP';
 const account = () => __awaiter(void 0, void 0, void 0, function* () {
     const trader = yield createTrader();
     yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
@@ -105,7 +134,7 @@ const placeOrder = () => __awaiter(void 0, void 0, void 0, function* () {
     const QUOTE_SIZE = dexterity.Fractional.New(1, 0);
     const price = dexterity.Fractional.New(27000, 0);
     yield trader.newOrder(ProductIndex, true, price, QUOTE_SIZE); // BID (AKA: BUY)
-    yield trader.newOrder(ProductIndex, false, price, QUOTE_SIZE); // ASK (AKA: SELL)
+    //await trader.newOrder(ProductIndex, false, price, QUOTE_SIZE) // ASK (AKA: SELL)
     yield trader.update();
     yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
         console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
@@ -125,4 +154,5 @@ const getMpgs = () => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.getMpgs = getMpgs;
-(0, exports.getMpgs)();
+//getMpgs()
+//placeOrder()

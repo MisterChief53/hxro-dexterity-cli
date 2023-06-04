@@ -35,6 +35,31 @@ const printCommandHelp = () => {
   `;
     console.log(help);
 };
+//account y balance (con verbose) no recibe nada, 
+const newDeposit = (symbols) => {
+    if (symbols.length == 1) {
+        (0, dexCLI_1.deposit)(parseInt(symbols[0], 10));
+        console.log("Deposit succesful");
+    }
+    else if (symbols.length == 0) {
+        console.log("Not enough arguments");
+    }
+    else {
+        console.log("Too many arguments");
+    }
+};
+const newWithdrawal = (symbols) => {
+    if (symbols.length == 1) {
+        (0, dexCLI_1.withdraw)(parseInt(symbols[0], 10));
+        console.log("Withdrawal succesful");
+    }
+    else if (symbols.length == 0) {
+        console.log("Not enough arguments");
+    }
+    else {
+        console.log("Too many arguments");
+    }
+};
 const createPoem = (symbols) => {
     var subject = 'john';
     var villain = 'johnny';
@@ -104,6 +129,21 @@ const runCLI = () => __awaiter(void 0, void 0, void 0, function* () {
             break;
         case 'printKeys':
             printKeys();
+            break;
+        case 'balance':
+            yield (0, dexCLI_1.balance)();
+            break;
+        case 'account':
+            yield (0, dexCLI_1.account)();
+            break;
+        case 'deposit':
+            yield newDeposit(symbols.slice(1));
+            break;
+        case 'withdraw':
+            yield newWithdrawal(symbols.slice(1));
+            break;
+        default:
+            console.log("Unknown argument");
             break;
     }
 });
