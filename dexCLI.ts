@@ -119,8 +119,8 @@ export const placeOrder = async () => {
 
   const price = dexterity.Fractional.New(27_000, 0)
 
-  //await trader.newOrder(ProductIndex, true, price, QUOTE_SIZE) // BID (AKA: BUY)
-  await trader.newOrder(ProductIndex, false, price, QUOTE_SIZE) // ASK (AKA: SELL)
+  await trader.newOrder(ProductIndex, true, price, QUOTE_SIZE) // BID (AKA: BUY)
+  //await trader.newOrder(ProductIndex, false, price, QUOTE_SIZE) // ASK (AKA: SELL)
 
   await trader.update()
   await trader.connect(NaN, async () => {
