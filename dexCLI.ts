@@ -99,3 +99,47 @@ export const withdraw = async (amount: number) => {
         console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `)
     })
 }
+
+export const placeOrder = async () => {
+  const trader = await createTrader();
+
+  await trader.connect(NaN, async () => {
+      console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `)
+  })
+
+  let ProductIndex: any
+  for (const [name, { index, product }] of trader.getProducts()) {
+      if (name.trim() === PRODUCT_NAME.trim()) {
+          ProductIndex = index
+          break
+      }
+  }
+
+  const QUOTE_SIZE = dexterity.Fractional.New(1, 0);
+
+  const price = dexterity.Fractional.New(27_000, 0)
+
+  await trader.newOrder(ProductIndex, true, price, QUOTE_SIZE) // BID (AKA: BUY)
+  await trader.newOrder(ProductIndex, false, price, QUOTE_SIZE) // ASK (AKA: SELL)
+
+  await trader.update()
+  await trader.connect(NaN, async () => {
+      console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(await Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `)
+  })
+}
+
+export const getMpgs = async () => {
+  const trader = await createTrader()
+  const mpgs = Array.from(trader.manifest.fields.mpgs.values());
+
+  for (const { pubkey, mpg, orderbooks } of mpgs) {
+      console.log(`\nMPG: ${pubkey.toBase58()}`)
+    for (const [_, { index, product }] of dexterity.Manifest.GetProductsOfMPG(mpg,)) {
+      const meta = dexterity.productToMeta(product);
+        console.log('productIndex: ', index);
+        console.log('Name: ', dexterity.bytesToString(meta.name).trim());
+    }
+  }
+};
+
+getMpgs()

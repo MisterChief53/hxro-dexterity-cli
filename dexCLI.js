@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.withdraw = exports.deposit = exports.balance = exports.account = void 0;
+exports.getMpgs = exports.placeOrder = exports.withdraw = exports.deposit = exports.balance = exports.account = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const anchor_1 = require("@project-serum/anchor");
 const dexterity_ts_1 = __importDefault(require("@hxronetwork/dexterity-ts"));
@@ -90,4 +90,39 @@ const withdraw = (amount) => __awaiter(void 0, void 0, void 0, function* () {
     }));
 });
 exports.withdraw = withdraw;
-(0, exports.withdraw)(500);
+const placeOrder = () => __awaiter(void 0, void 0, void 0, function* () {
+    const trader = yield createTrader();
+    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
+        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
+    }));
+    let ProductIndex;
+    for (const [name, { index, product }] of trader.getProducts()) {
+        if (name.trim() === PRODUCT_NAME.trim()) {
+            ProductIndex = index;
+            break;
+        }
+    }
+    const QUOTE_SIZE = dexterity.Fractional.New(1, 0);
+    const price = dexterity.Fractional.New(27000, 0);
+    yield trader.newOrder(ProductIndex, true, price, QUOTE_SIZE); // BID (AKA: BUY)
+    yield trader.newOrder(ProductIndex, false, price, QUOTE_SIZE); // ASK (AKA: SELL)
+    yield trader.update();
+    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
+        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
+    }));
+});
+exports.placeOrder = placeOrder;
+const getMpgs = () => __awaiter(void 0, void 0, void 0, function* () {
+    const trader = yield createTrader();
+    const mpgs = Array.from(trader.manifest.fields.mpgs.values());
+    for (const { pubkey, mpg, orderbooks } of mpgs) {
+        console.log(`\nMPG: ${pubkey.toBase58()}`);
+        for (const [_, { index, product }] of dexterity.Manifest.GetProductsOfMPG(mpg)) {
+            const meta = dexterity.productToMeta(product);
+            console.log('productIndex: ', index);
+            console.log('Name: ', dexterity.bytesToString(meta.name).trim());
+        }
+    }
+});
+exports.getMpgs = getMpgs;
+(0, exports.getMpgs)();
