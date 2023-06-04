@@ -12,147 +12,150 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMpgs = exports.placeOrder = exports.withdraw = exports.deposit = exports.balance = exports.account = exports.readPrivateKey = void 0;
+exports.dexCLI = exports.classInitializer = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const anchor_1 = require("@project-serum/anchor");
 const dexterity_ts_1 = __importDefault(require("@hxronetwork/dexterity-ts"));
+const util_1 = require("util");
 const fs_1 = __importDefault(require("fs"));
 const dexterity = dexterity_ts_1.default;
 const filePath = 'config.json';
+const readFileAsync = (0, util_1.promisify)(fs_1.default.readFile);
+const readPrivateKey = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = yield readFileAsync(filePath, 'utf-8');
+        const jsonData = JSON.parse(data);
+        const privateKey = jsonData.privateKey.map((num) => parseInt(num));
+        return privateKey;
+    }
+    catch (err) {
+        console.log('Error reading config file.', err);
+        throw err;
+    }
+});
 const rpc = 'https://rpc-devnet.helius.xyz/?api-key=4ba0f9cc-c6e3-4401-84c0-f2c8a822a278';
-const connection = new web3_js_1.Connection(rpc, 'confirmed');
-const readPrivateKey = () => {
-    try {
-        const data = fs_1.default.readFileSync(filePath, 'utf-8');
-        const jsonData = JSON.parse(data);
-        return jsonData.privateKey.map((num) => parseInt(num));
-    }
-    catch (err) {
-        console.log('Error reading config file.', err);
-        throw err;
-    }
-};
-exports.readPrivateKey = readPrivateKey;
-const getTrg = () => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const data = fs_1.default.readFileSync(filePath, 'utf-8');
-        const jsonData = JSON.parse(data);
-        if (!jsonData.Trg) {
-            const newData = fs_1.default.readFileSync(filePath, 'utf-8');
-            jsonData.Trg = JSON.parse(newData).Trg;
-        }
-        return jsonData.Trg;
-    }
-    catch (err) {
-        console.log('Error reading config file.', err);
-        throw err;
-    }
-});
-const getMpg = () => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const data = fs_1.default.readFileSync(filePath, 'utf-8');
-        const jsonData = JSON.parse(data);
-        if (!jsonData.Mpg) {
-            const newData = fs_1.default.readFileSync(filePath, 'utf-8');
-            jsonData.Mpg = JSON.parse(newData).Mpg;
-        }
-        return jsonData.Mpg;
-    }
-    catch (err) {
-        console.log('Error reading config file.', err);
-        throw err;
-    }
-});
-const createTrg = () => __awaiter(void 0, void 0, void 0, function* () {
+const classInitializer = () => __awaiter(void 0, void 0, void 0, function* () {
+    const privateKey = yield readPrivateKey();
+    const keypair = web3_js_1.Keypair.fromSecretKey(new Uint8Array(privateKey));
+    const wallet = new anchor_1.Wallet(keypair);
+    const MPG = new web3_js_1.PublicKey('HyWxreWnng9ZBDPYpuYugAfpCMkRkJ1oz93oyoybDFLB');
     const manifest = yield dexterity.getManifest(rpc, true, wallet);
-    const trg = yield manifest.createTrg(new web3_js_1.PublicKey(MPG));
-    console.log(trg.toBase58());
-});
-const privateKey = (0, exports.readPrivateKey)();
-const keypair = web3_js_1.Keypair.fromSecretKey(new Uint8Array(privateKey));
-const wallet = new anchor_1.Wallet(keypair);
-const MPG = getMpg();
-const TRG = getTrg();
-const mpgPubkey = new web3_js_1.PublicKey(MPG);
-const PRODUCT_NAME = 'BTCUSD-PERP';
-const createTrader = () => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = new dexterity.Trader(yield dexterity.getManifest(rpc, true, wallet), TRG);
-    return trader;
-});
-const account = () => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = yield createTrader();
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()}`);
-    }));
-});
-exports.account = account;
-const balance = () => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = yield createTrader();
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()}`);
-    }));
-});
-exports.balance = balance;
-const deposit = (amount) => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = yield createTrader();
-    const n = dexterity.Fractional.New(amount, 0);
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()}`);
-    }));
-    yield trader.deposit(n);
-    yield trader.update();
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()}`);
-    }));
-});
-exports.deposit = deposit;
-const withdraw = (amount) => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = yield createTrader();
-    const n = dexterity.Fractional.New(amount, 0);
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
-    }));
-    yield trader.withdraw(n);
-    yield trader.update();
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
-    }));
-});
-exports.withdraw = withdraw;
-const placeOrder = () => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = yield createTrader();
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
-    }));
-    let ProductIndex;
-    for (const [name, { index, product }] of trader.getProducts()) {
-        if (name.trim() === PRODUCT_NAME.trim()) {
-            ProductIndex = index;
-            break;
-        }
+    // Validate TRG
+    const trg = Array.from(yield manifest.getTRGsOfWallet(MPG));
+    if (trg.length > 0) {
+        const trader = new dexterity.Trader(manifest, trg[0]);
+        return { manifest, trader };
     }
-    const QUOTE_SIZE = dexterity.Fractional.New(1, 0);
-    const price = dexterity.Fractional.New(27000, 0);
-    yield trader.newOrder(ProductIndex, true, price, QUOTE_SIZE); // BID (AKA: BUY)
-    //await trader.newOrder(ProductIndex, false, price, QUOTE_SIZE) // ASK (AKA: SELL)
-    yield trader.update();
-    yield trader.connect(NaN, () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log(`BALANCE: ${trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(trader.getOpenOrders(PRODUCT_NAME))).length} | EXCESS MARGIN: ${trader.getExcessMargin()} | PNL: ${trader.getPnL()} `);
-    }));
-});
-exports.placeOrder = placeOrder;
-const getMpgs = () => __awaiter(void 0, void 0, void 0, function* () {
-    const trader = yield createTrader();
-    const mpgs = Array.from(trader.manifest.fields.mpgs.values());
-    for (const { pubkey, mpg, orderbooks } of mpgs) {
-        console.log(`\nMPG: ${pubkey.toBase58()}`);
-        for (const [_, { index, product }] of dexterity.Manifest.GetProductsOfMPG(mpg)) {
-            const meta = dexterity.productToMeta(product);
-            console.log('productIndex: ', index);
-            console.log('Name: ', dexterity.bytesToString(meta.name).trim());
-        }
+    else {
+        const TRG = yield manifest.createTrg(MPG);
+        const trader = new dexterity.Trader(manifest, TRG);
+        return { manifest, trader };
     }
 });
-exports.getMpgs = getMpgs;
-//getMpgs()
-//placeOrder()
+exports.classInitializer = classInitializer;
+class dexCLI {
+    constructor(manifest, trader) {
+        this.manifest = manifest;
+        this.trader = trader;
+        this.PRODUCT_NAME = 'BTCUSD-PERP';
+    }
+    deposit(amount) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const n = dexterity.Fractional.New(amount, 0);
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+            }));
+            yield this.trader.deposit(n);
+            yield this.trader.update();
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+            }));
+        });
+    }
+    ;
+    withdraw(amount) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const n = dexterity.Fractional.New(amount, 0);
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+            }));
+            yield this.trader.withdraw(n);
+            yield this.trader.update();
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()}`);
+            }));
+        });
+    }
+    ;
+    account() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                const balance = this.trader.getCashBalance();
+                const excess = this.trader.getExcessMargin();
+                const totalPortfolio = this.trader.getPortfolioValue();
+                const positionValue = this.trader.getPositionValue();
+                const pnl = this.trader.getPnL();
+                const active = (yield Promise.all(this.trader.getPositions())).length;
+                const openOrders = (yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length;
+                console.log('\nBALANCE: ' + balance +
+                    '\nEXCESS MARGIN: ' + excess +
+                    '\nPORTFOLIO VALUE: ' + totalPortfolio +
+                    '\nACTIVE POSITION VALUE: ' + positionValue +
+                    '\nACTIVE: ' + active +
+                    '\nOPEN ORDERS: ' + openOrders +
+                    '\nPNL: ' + pnl);
+            }));
+        });
+    }
+    ;
+    balance() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()}`);
+            }));
+        });
+    }
+    ;
+    placeOrder(size, price, isBid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()} `);
+            }));
+            let ProductIndex;
+            for (const [name, { index, product }] of this.trader.getProducts()) {
+                if (name.trim() === this.PRODUCT_NAME.trim()) {
+                    ProductIndex = index;
+                    break;
+                }
+            }
+            const QUOTE_SIZE = dexterity.Fractional.New(size, 0);
+            const limitPrice = dexterity.Fractional.New(price, 0);
+            yield this.trader.newOrder(ProductIndex, isBid, limitPrice, QUOTE_SIZE);
+            yield this.trader.update();
+            yield this.trader.connect(NaN, () => __awaiter(this, void 0, void 0, function* () {
+                console.log(`BALANCE: ${this.trader.getCashBalance()} | OPEN ORDERS: ${(yield Promise.all(this.trader.getOpenOrders(this.PRODUCT_NAME))).length} | EXCESS MARGIN: ${this.trader.getExcessMargin()} | PNL: ${this.trader.getPnL()} `);
+            }));
+        });
+    }
+    getMpgs() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const mpgs = Array.from(this.trader.manifest.fields.mpgs.values());
+            for (const { pubkey, mpg, orderbooks } of mpgs) {
+                console.log(`\nMPG: ${pubkey.toBase58()}`);
+                for (const [_, { index, product }] of dexterity.Manifest.GetProductsOfMPG(mpg)) {
+                    const meta = dexterity.productToMeta(product);
+                    console.log('productIndex: ', index);
+                    console.log('Name: ', dexterity.bytesToString(meta.name).trim());
+                }
+            }
+        });
+    }
+    ;
+}
+exports.dexCLI = dexCLI;
+const start = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { manifest, trader } = yield (0, exports.classInitializer)();
+    const cli = new dexCLI(manifest, trader);
+    cli.account();
+});
+start();
