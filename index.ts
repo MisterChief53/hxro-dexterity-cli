@@ -24,6 +24,30 @@ const printCommandHelp = () => {
   `
   console.log(help);
 }
+//account y balance (con verbose) no recibe nada, 
+
+const newDeposit = (symbols: string[]) => {
+  if(symbols.length == 1){
+    deposit(parseInt(symbols[0],10));
+    console.log("Deposit succesful");
+  }else if(symbols.length == 0){
+    console.log("Not enough arguments");
+  }else{
+    console.log("Too many arguments");
+  }
+}
+
+const newWithdrawal = (symbols: string[]) => {
+  if(symbols.length == 1){
+    withdraw(parseInt(symbols[0],10));
+    console.log("Withdrawal succesful");
+  }else if(symbols.length == 0){
+    console.log("Not enough arguments");
+  }else{
+    console.log("Too many arguments");
+  }
+}
+
 
 const createPoem = (symbols: string[]) => {
   var subject = 'john';
@@ -57,6 +81,7 @@ const createPoem = (symbols: string[]) => {
 
   console.log(poem);
 }
+
 
 const printKeys = () => {
   const filePath = 'config.json';
@@ -103,6 +128,21 @@ const runCLI = async () => {
       break;
     case 'printKeys':
       printKeys();
+      break;
+    case 'balance':
+      await balance();
+      break;
+    case 'account':
+      await account();
+      break;
+    case 'deposit':
+      await newDeposit(symbols.slice(1));
+      break;
+    case 'withdraw':
+      await newWithdrawal(symbols.slice(1));
+      break;
+    default:
+      console.log("Unknown argument");
       break;
   }
 }
